@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calcul exact dans les extensions de ℚ (Haskell + WebAssembly)</title>
+<meta name="description" content="Simplification d'expressions et polynômes minimaux de nombres algébriques, calculés dans le navigateur par du Haskell compilé en WebAssembly.">
+<style>
+  :root {
+    --bg: #f3f5f8; --ink: #1c2330; --muted: #5a6577; --rule: #c9d1dd;
+    --accent: #0d6b6b; --accent-ink: #ffffff; --panel: #ffffff; --sel: #e2eef0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151a22; --ink: #e6eaf0; --muted: #98a3b5; --rule: #323b4a;
+            --accent: #5cc4c4; --accent-ink: #0f1a1a; --panel: #1c232e; --sel: #1f3338; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+         line-height: 1.6; }
+  main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 .75rem; font-weight: 600; }
+  p { margin: 0 0 1rem; max-width: 38rem; }
+  .lead { color: var(--muted); }
+  ul.examples { list-style: none; margin: 2rem 0 1.5rem; padding: 0; border-top: 1px solid var(--rule); }
+  .examples li { border-bottom: 1px solid var(--rule); }
+  .examples button { all: unset; box-sizing: border-box; display: block; width: 100%;
+         padding: .9rem 1rem .9rem 1.1rem; cursor: pointer; border-left: 4px solid transparent; }
+  .examples button:hover:not(:disabled) { background: var(--sel); }
+  .examples button[aria-pressed="true"] { background: var(--sel); border-left-color: var(--accent); }
+  .examples button:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .examples button:disabled { opacity: .5; cursor: progress; }
+  .ex-title { display: block; font-weight: 600; }
+  .ex-math { display: block; color: var(--muted); font-size: .95rem; }
+  section.result { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 1.1rem 1.25rem; }
+  section.result h2 { font-size: 1rem; margin: 0 0 .25rem; }
+  .note { color: var(--muted); font-size: .9rem; margin: 0 0 .75rem; }
+  pre { margin: 0; padding: .8rem 1rem; background: var(--bg); border-radius: 4px;
+        font: .95rem/1.5 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+        white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+  .meta { color: var(--muted); font-size: .85rem; margin-top: .6rem; }
+  .err { color: #b3261e; }
+  @media (prefers-color-scheme: dark) { .err { color: #ff8a80; } }
+  footer { margin-top: 2.5rem; color: var(--muted); font-size: .9rem; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Calcul exact dans les extensions de ℚ</h1>
+  <p class="lead">Choisissez un exemple : le calcul est fait dans votre navigateur par une bibliothèque Haskell compilée en WebAssembly, en arithmétique exacte sur de grands entiers.</p>
+
+  <ul class="examples" id="list"></ul>
+
+  <section class="result" aria-live="polite">
+    <h2 id="r-title">Chargement du module…</h2>
+    <p class="note" id="r-note"></p>
+    <pre id="r-out">Le premier chargement peut prendre quelques secondes.</pre>
+    <div class="meta" id="r-meta"></div>
+  </section>
+
+  <footer>
+    <p>Un nombre rationnel s'écrit « (11 % 1) » pour 11/1 et « 7 % 2 » pour 7/2.
+       Code source et documentation : <a href="https://github.com/Ebmtranceboy/purescript-numberfield">dépôt GitHub</a>
+       (version PureScript) et <a href="https://preuve.github.io/numberfield/">tutoriel interactif</a>.</p>
+  </footer>
+</main>
+
+<script type="module">
+  import { WASI, OpenFile, File, ConsoleStdout } from "./vendor/index.js";
+
+  // Pour ajouter un exemple : ajouter une clé dans la fonction `compute` du Haskell,
+  // puis une ligne ici (key = texte envoyé à compute).
+  const EXAMPLES = [
+    { key: "phi", title: "Simplifier une fraction avec le nombre d'or",
+      math: "(φ + 2) / (φ − 2)²  avec φ² = φ + 1",
+      note: "Résultat sous la forme a·phi + b, avec phi le nombre d'or." },
+    { key: "expr2", title: "Inverser une somme de radicaux",
+      math: "1 / (∛4 + ∛2 − √3)  dans ℚ(∛2, √3)",
+      note: "crt2 désigne ∛2 et srt3 désigne √3. Le résultat est un polynôme en ces deux nombres." },
+    { key: "minimal2", title: "Polynôme minimal d'une somme",
+      math: "∛2 + √3",
+      note: "Le polynôme de plus petit degré à coefficients rationnels qui s'annule en ∛2 + √3." }
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const list = $("list");
+  const buttons = [];
+  let compute = null;
+
+  for (const ex of EXAMPLES) {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    b.disabled = true;
+    b.setAttribute("aria-pressed", "false");
+    b.innerHTML = '<span class="ex-title"></span><span class="ex-math"></span>';
+    b.querySelector(".ex-title").textContent = ex.title;
+    b.querySelector(".ex-math").textContent = ex.math;
+    b.addEventListener("click", () => run(ex, b));
+    li.appendChild(b); list.appendChild(li); buttons.push(b);
+  }
+
+  async function run(ex, btn) {
+    buttons.forEach((x) => x.setAttribute("aria-pressed", String(x === btn)));
+    $("r-title").textContent = ex.title;
+    $("r-note").textContent = ex.note;
+    $("r-out").className = "";
+    $("r-out").textContent = "Calcul en cours…";
+    $("r-meta").textContent = "";
+    await new Promise((r) => setTimeout(r, 0)); // laisse le navigateur afficher l'état
+    try {
+      const t0 = performance.now();
+      const res = await compute(ex.key);
+      $("r-out").textContent = res;
+      $("r-meta").textContent = "Calculé en " + Math.round(performance.now() - t0) + " ms";
+    } catch (e) {
+      $("r-out").className = "err";
+      $("r-out").textContent = "Erreur pendant le calcul : " + e;
+    }
+  }
+
+  try {
+    const wasi = new WASI([], [], [
+      new OpenFile(new File([])),
+      ConsoleStdout.lineBuffered((m) => console.log(m)),
+      ConsoleStdout.lineBuffered((m) => console.error(m)),
+    ]);
+    const box = {};
+    const jsffi = (await import("./compute.js")).default;
+    const bytes = await (await fetch("compute.wasm")).arrayBuffer();
+    const { instance } = await WebAssembly.instantiate(bytes, {
+      wasi_snapshot_preview1: wasi.wasiImport,
+      ghc_wasm_jsffi: jsffi(box),
+    });
+    Object.assign(box, instance.exports);
+    wasi.initialize(instance);
+    compute = (s) => box.compute(s);
+
+    buttons.forEach((b) => (b.disabled = false));
+    $("r-title").textContent = "Module prêt";
+    $("r-out").textContent = "Cliquez sur un exemple ci-dessus.";
+  } catch (e) {
+    $("r-title").textContent = "Le module n'a pas pu être chargé";
+    $("r-out").className = "err";
+    $("r-out").textContent = String(e) +
+      "\n\nVérifiez que compute.wasm, compute.js et le dossier vendor/ sont bien à côté de cette page, et ouvrez la console (F12) pour plus de détails.";
+  }
+</script>
+</body>
+</html>
