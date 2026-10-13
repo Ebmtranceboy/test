@@ -8,39 +8,49 @@
 <style>
   :root {
     --bg: #f3f5f8; --ink: #1c2330; --muted: #5a6577; --rule: #c9d1dd;
-    --accent: #0d6b6b; --accent-ink: #ffffff; --panel: #ffffff; --sel: #e2eef0;
+    --accent: #0d6b6b; --accent-ink: #ffffff; --panel: #ffffff; --sel: #e2eef0; --warn: #8a5300;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #151a22; --ink: #e6eaf0; --muted: #98a3b5; --rule: #323b4a;
-            --accent: #5cc4c4; --accent-ink: #0f1a1a; --panel: #1c232e; --sel: #1f3338; }
+            --accent: #5cc4c4; --accent-ink: #0f1a1a; --panel: #1c232e; --sel: #1f3338; --warn: #e0b060; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink);
-         font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
-         line-height: 1.6; }
-  main { max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+         font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif; line-height: 1.6; }
+  main { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
   h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 .75rem; font-weight: 600; }
-  p { margin: 0 0 1rem; max-width: 38rem; }
+  h2 { font-size: 1.05rem; margin: 2rem 0 .5rem; }
+  p { margin: 0 0 1rem; max-width: 40rem; }
   .lead { color: var(--muted); }
-  ul.examples { list-style: none; margin: 2rem 0 1.5rem; padding: 0; border-top: 1px solid var(--rule); }
+  ul.examples { list-style: none; margin: 0 0 1.5rem; padding: 0; border-top: 1px solid var(--rule); }
   .examples li { border-bottom: 1px solid var(--rule); }
   .examples button { all: unset; box-sizing: border-box; display: block; width: 100%;
-         padding: .9rem 1rem .9rem 1.1rem; cursor: pointer; border-left: 4px solid transparent; }
-  .examples button:hover:not(:disabled) { background: var(--sel); }
+         padding: .7rem 1rem .7rem 1.1rem; cursor: pointer; border-left: 4px solid transparent; }
+  .examples button:hover { background: var(--sel); }
   .examples button[aria-pressed="true"] { background: var(--sel); border-left-color: var(--accent); }
-  .examples button:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
-  .examples button:disabled { opacity: .5; cursor: progress; }
+  .examples button:focus-visible, .run:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .ex-title { display: block; font-weight: 600; }
   .ex-math { display: block; color: var(--muted); font-size: .95rem; }
-  section.result { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 1.1rem 1.25rem; }
-  section.result h2 { font-size: 1rem; margin: 0 0 .25rem; }
-  .note { color: var(--muted); font-size: .9rem; margin: 0 0 .75rem; }
+  label { display: block; font-weight: 600; margin: 1rem 0 .25rem; }
+  .hint { color: var(--muted); font-size: .88rem; font-weight: 400; }
+  input { width: 100%; padding: .55rem .7rem; font: 1rem ui-monospace, Menlo, Consolas, monospace;
+          background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px; }
+  .run { margin-top: 1.1rem; padding: .6rem 1.3rem; font: inherit; font-weight: 600; cursor: pointer;
+         background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 4px; }
+  .run:disabled { opacity: .5; cursor: progress; }
+  .warn { margin-top: 1rem; padding: .7rem 1rem; border-left: 4px solid var(--warn); background: var(--panel);
+          font-size: .92rem; max-width: 40rem; }
+  section.result { margin-top: 1.5rem; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 1.1rem 1.25rem; }
+  section.result h2 { margin: 0 0 .5rem; }
   pre { margin: 0; padding: .8rem 1rem; background: var(--bg); border-radius: 4px;
-        font: .95rem/1.5 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+        font: .95rem/1.5 ui-monospace, Menlo, Consolas, monospace;
         white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
   .meta { color: var(--muted); font-size: .85rem; margin-top: .6rem; }
   .err { color: #b3261e; }
   @media (prefers-color-scheme: dark) { .err { color: #ff8a80; } }
+  details { margin-top: 1.5rem; max-width: 40rem; }
+  summary { cursor: pointer; font-weight: 600; }
+  code { font: .92em ui-monospace, Menlo, Consolas, monospace; }
   footer { margin-top: 2.5rem; color: var(--muted); font-size: .9rem; }
   footer a { color: var(--accent); }
 </style>
@@ -48,77 +58,121 @@
 <body>
 <main>
   <h1>Calcul exact dans les extensions de ℚ</h1>
-  <p class="lead">Choisissez un exemple : le calcul est fait dans votre navigateur par une bibliothèque Haskell compilée en WebAssembly, en arithmétique exacte sur de grands entiers.</p>
+  <p class="lead">Donnez des nombres algébriques par leurs polynômes, puis une expression à simplifier, ou demandez le polynôme minimal de leur somme. Le calcul est fait dans votre navigateur par une bibliothèque Haskell compilée en WebAssembly, en arithmétique exacte.</p>
 
+  <h2>Exemples</h2>
   <ul class="examples" id="list"></ul>
+
+  <h2>Votre calcul</h2>
+  <label for="names">Noms des nombres algébriques <span class="hint">séparés par des virgules</span></label>
+  <input id="names" autocomplete="off" spellcheck="false" value="phi">
+  <label for="polys">Polynômes définissants, en <code>x</code> <span class="hint">séparés par des points-virgules, dans le même ordre</span></label>
+  <input id="polys" autocomplete="off" spellcheck="false" value="x^2-x-1">
+  <label for="expr">Expression <span class="hint">ou <code>min</code> pour le polynôme minimal de la somme</span></label>
+  <input id="expr" autocomplete="off" spellcheck="false" value="(phi+2)/((phi-2)*(phi-2))">
+  <button class="run" id="go" disabled>Calculer</button>
+
+  <div class="warn"><strong>Attention.</strong> Chaque polynôme saisi doit être <strong>irréductible</strong> sur ℚ (c'est le polynôme minimal du nombre). S'il ne l'est pas, le calcul peut renvoyer un résultat faux sans signaler d'erreur. Le degré du résultat est le produit des degrés saisis ; il est limité ici à 24.</div>
 
   <section class="result" aria-live="polite">
     <h2 id="r-title">Chargement du module…</h2>
-    <p class="note" id="r-note"></p>
     <pre id="r-out">Le premier chargement peut prendre quelques secondes.</pre>
     <div class="meta" id="r-meta"></div>
   </section>
 
+  <details>
+    <summary>Syntaxe</summary>
+    <p>Expressions : <code>+ - * /</code>, parenthèses, puissance entière <code>^</code> (par exemple <code>c^2</code>, <code>c^-1</code>), constantes rationnelles (<code>2</code>, <code>0.5</code>). Un nom désigne le nombre algébrique du polynôme de même rang. Polynômes : termes comme <code>3*x^2</code>, <code>x</code>, <code>-2</code>.</p>
+    <p>Un nombre rationnel est affiché « (11 % 1) » pour 11/1, et « 7 % 2 » pour 7/2.</p>
+  </details>
+
   <footer>
-    <p>Un nombre rationnel s'écrit « (11 % 1) » pour 11/1 et « 7 % 2 » pour 7/2.
-       Code source et documentation : <a href="https://github.com/Ebmtranceboy/purescript-numberfield">dépôt GitHub</a>
-       (version PureScript) et <a href="https://preuve.github.io/numberfield/">tutoriel interactif</a>.</p>
+    <p>Documentation et code : <a href="https://github.com/Ebmtranceboy/purescript-numberfield">dépôt GitHub</a> (version PureScript) et <a href="https://preuve.github.io/numberfield/">tutoriel</a>.</p>
   </footer>
 </main>
 
 <script type="module">
   import { WASI, OpenFile, File, ConsoleStdout } from "./vendor/index.js";
 
-  // Pour ajouter un exemple : ajouter une clé dans la fonction `compute` du Haskell,
-  // puis une ligne ici (key = texte envoyé à compute).
   const EXAMPLES = [
-    { key: "phi", title: "Simplifier une fraction avec le nombre d'or",
-      math: "(φ + 2) / (φ − 2)²  avec φ² = φ + 1",
-      note: "Résultat sous la forme a·phi + b, avec phi le nombre d'or." },
-    { key: "expr2", title: "Inverser une somme de radicaux",
-      math: "1 / (∛4 + ∛2 − √3)  dans ℚ(∛2, √3)",
-      note: "crt2 désigne ∛2 et srt3 désigne √3. Le résultat est un polynôme en ces deux nombres." },
-    { key: "minimal2", title: "Polynôme minimal d'une somme",
-      math: "∛2 + √3",
-      note: "Le polynôme de plus petit degré à coefficients rationnels qui s'annule en ∛2 + √3." }
+    { title: "Simplifier une fraction avec le nombre d'or", math: "(φ + 2) / (φ − 2)²  avec φ² = φ + 1",
+      names: "phi", polys: "x^2-x-1", expr: "(phi+2)/((phi-2)*(phi-2))" },
+    { title: "Inverser une somme de radicaux", math: "1 / (∛4 + ∛2 − √3)  dans ℚ(∛2, √3)",
+      names: "c,s", polys: "x^3-2;x^2-3", expr: "1/(c*c+c-s)" },
+    { title: "Polynôme minimal d'une somme", math: "∛2 + √3",
+      names: "c,s", polys: "x^3-2;x^2-3", expr: "min" },
+    { title: "Polynôme minimal de √2 + √3", math: "√2 + √3",
+      names: "a,b", polys: "x^2-2;x^2-3", expr: "min" }
   ];
 
   const $ = (id) => document.getElementById(id);
-  const list = $("list");
   const buttons = [];
   let compute = null;
 
+  function select(ex, btn) {
+    buttons.forEach((x) => x.setAttribute("aria-pressed", String(x === btn)));
+    $("names").value = ex.names; $("polys").value = ex.polys; $("expr").value = ex.expr;
+    if (compute) run();
+  }
   for (const ex of EXAMPLES) {
     const li = document.createElement("li");
     const b = document.createElement("button");
-    b.type = "button";
-    b.disabled = true;
-    b.setAttribute("aria-pressed", "false");
+    b.type = "button"; b.setAttribute("aria-pressed", "false");
     b.innerHTML = '<span class="ex-title"></span><span class="ex-math"></span>';
     b.querySelector(".ex-title").textContent = ex.title;
     b.querySelector(".ex-math").textContent = ex.math;
-    b.addEventListener("click", () => run(ex, b));
-    li.appendChild(b); list.appendChild(li); buttons.push(b);
+    b.addEventListener("click", () => select(ex, b));
+    li.appendChild(b); $("list").appendChild(li); buttons.push(b);
   }
 
-  async function run(ex, btn) {
-    buttons.forEach((x) => x.setAttribute("aria-pressed", String(x === btn)));
-    $("r-title").textContent = ex.title;
-    $("r-note").textContent = ex.note;
-    $("r-out").className = "";
+  // Degré d'un polynôme saisi, estimé côté page pour borner le calcul.
+  function degreeOf(p) {
+    let d = 0;
+    for (const m of p.matchAll(/x(\^\s*(\d+))?/g)) d = Math.max(d, m[2] ? parseInt(m[2], 10) : 1);
+    return d;
+  }
+  function check(names, polys, expr) {
+    const input = names + "|" + polys + "|" + expr;
+    if (input.length > 500) return "Entrée trop longue (500 caractères au plus).";
+    const nn = names.split(",").filter((s) => s.trim()).length;
+    const ps = polys.split(";").filter((s) => s.trim());
+    if (nn < 1 || nn > 6) return "Entre 1 et 6 nombres algébriques.";
+    if (ps.length !== nn) return "Il faut autant de polynômes (" + ps.length + ") que de noms (" + nn + ").";
+    if (/[|]/.test(names + polys + expr)) return "Le caractère | est réservé.";
+    let prod = 1;
+    for (const p of ps) {
+      const d = degreeOf(p);
+      if (d < 1) return "Chaque polynôme doit contenir la variable x : « " + p.trim() + " ».";
+      if (d > 12) return "Degré limité à 12 par polynôme.";
+      prod *= d;
+    }
+    if (prod > 24) return "Le produit des degrés (" + prod + ") dépasse 24 : calcul trop long pour cette démo.";
+    return null;
+  }
+
+  async function run() {
+    if (!compute) return;
+    const names = $("names").value, polys = $("polys").value, expr = $("expr").value;
+    const problem = check(names, polys, expr);
+    $("r-out").className = ""; $("r-meta").textContent = "";
+    if (problem) { $("r-title").textContent = "Saisie à corriger"; $("r-out").className = "err"; $("r-out").textContent = problem; return; }
+    $("go").disabled = true;
+    $("r-title").textContent = expr.trim() === "min" ? "Polynôme minimal de la somme" : "Résultat simplifié";
     $("r-out").textContent = "Calcul en cours…";
-    $("r-meta").textContent = "";
-    await new Promise((r) => setTimeout(r, 0)); // laisse le navigateur afficher l'état
+    await new Promise((r) => setTimeout(r, 0));
     try {
       const t0 = performance.now();
-      const res = await compute(ex.key);
+      const res = await compute(names + "|" + polys + "|" + expr);
       $("r-out").textContent = res;
       $("r-meta").textContent = "Calculé en " + Math.round(performance.now() - t0) + " ms";
     } catch (e) {
       $("r-out").className = "err";
       $("r-out").textContent = "Erreur pendant le calcul : " + e;
     }
+    $("go").disabled = false;
   }
+  $("go").addEventListener("click", run);
+  for (const id of ["names", "polys", "expr"]) $(id).addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
 
   try {
     const wasi = new WASI([], [], [
@@ -136,15 +190,14 @@
     Object.assign(box, instance.exports);
     wasi.initialize(instance);
     compute = (s) => box.compute(s);
-
-    buttons.forEach((b) => (b.disabled = false));
+    $("go").disabled = false;
     $("r-title").textContent = "Module prêt";
-    $("r-out").textContent = "Cliquez sur un exemple ci-dessus.";
+    $("r-out").textContent = "Choisissez un exemple ou cliquez sur Calculer.";
   } catch (e) {
     $("r-title").textContent = "Le module n'a pas pu être chargé";
     $("r-out").className = "err";
     $("r-out").textContent = String(e) +
-      "\n\nVérifiez que compute.wasm, compute.js et le dossier vendor/ sont bien à côté de cette page, et ouvrez la console (F12) pour plus de détails.";
+      "\n\nVérifiez que compute.wasm, compute.js et le dossier vendor/ sont bien à côté de cette page, et ouvrez la console (F12).";
   }
 </script>
 </body>
